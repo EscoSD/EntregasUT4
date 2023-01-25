@@ -7,6 +7,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Projections;
 import org.bson.Document;
 
 import java.util.*;
@@ -15,6 +16,7 @@ public class Main {
 	static MongoDatabase database;
 	static MongoCollection<Document> collection;
 	static Scanner scan;
+	// Campo que controla los ID para evitar errores al hacerlo de forma manual
 	static int id;
 
 	public static void main(String[] args) {
@@ -34,7 +36,7 @@ public class Main {
 					case 2 -> update();
 					case 3 -> delete();
 					case 4 -> list();
-					case 5 -> query();
+					case 5 -> extras();
 					case 0 -> { break menu; }
 					default -> System.out.println("Introduce un número válido");
 				}
@@ -42,6 +44,7 @@ public class Main {
 		}
 	}
 
+	// Método de creación de Doujinshis e inserción de estos en la base de datos
 	static void create() {
 		System.out.print("\nNúmero de Doujinshis a crear.- ");
 		int inserts = getInt();
@@ -63,7 +66,8 @@ public class Main {
 		}
 	}
 
-	private static Document newDocument() {
+	// Método que devuelve un nuevo documento con información introducida por el usuario.
+	static Document newDocument() {
 		String name;
 		int pages;
 		double prize;
@@ -81,12 +85,14 @@ public class Main {
 			prize = getDouble();
 		} while(prize <= 0);
 
+		// Se suma uno al ID antes de introducirlo al documento
 		return new Document("_id", ++id)
 				.append("nombre", name)
 				.append("páginas", pages)
 				.append("precio", prize);
 	}
 
+	// Método que actualiza el contenido de la base de datos
 	static void update() {
 		System.out.print("\nID del Doujinshi a actualizar: ");
 		int updateID = getInt();
@@ -144,6 +150,7 @@ public class Main {
 		}
 	}
 
+	// Método que borra una entrada de la base de datos
 	static void delete() {
 		System.out.print("\nID del Doujinshi a eliminar: ");
 
@@ -156,6 +163,7 @@ public class Main {
 		);
 	}
 
+	// Método que lista el contenido al completo de la base de datos
 	static void list() {
 		List<Doujinshi> doujins = new ArrayList<>();
 		FindIterable<Document> iterable = collection.find();
@@ -169,23 +177,23 @@ public class Main {
 			System.out.println("\nNo hay Doujinshis a mostrar.");
 	}
 
-	static void query() {
-
-		AggregateIterable<Document> aggregateIterable;
+	// Método con un menú de consultas y updates extras
+	static void extras() {
 
 		System.out.print("""
 
-				Consultas
+				Extras
 				1.- Consultar el precio más alto y el más bajo.
 				2.- Mostrar los Doujinshis con más de 40 páginas.
 				3.- Sumar 5€ al precio de todos los Doujinshis.
+				4.- Mostrar el mayor número de páginas.
 				.-\s""");
 
 		int option = scan.nextInt();
 
 		switch (option) {
-			case 1 -> {
-				aggregateIterable = collection.aggregate(
+			case 1 -> { // Consulta de precios más alto y bajo
+				AggregateIterable<Document> aggregateIterable = collection.aggregate(
 						List.of(
 								Aggregates.group(
 										null,
@@ -201,7 +209,7 @@ public class Main {
 				}
 			}
 
-			case 2 -> {
+			case 2 -> { // Consulta de Doujinshis con más de 40 páginas
 				List<Doujinshi> doujins = new ArrayList<>();
 				Document document = new Document("páginas", new Document("$gt", 30));
 				FindIterable<Document> findIterable =  collection.find(document);
@@ -214,16 +222,26 @@ public class Main {
 
 
 			}
-			case 3 -> {
+
+			case 3 -> { // Añadir 5 € al precio de todos los Doujinshis
 				Document filter = new Document();
 				Document updated = new Document("$inc", new Document("precio", 5));
 				collection.updateMany(filter, updated);
 			}
-			default -> System.out.println();
+
+			case 4 -> { // Obtención del mayor número de páginas
+				FindIterable<Document> findIterable = collection.find().limit(1).sort(new Document("páginas", -1))
+						.projection(Projections.exclude("_id","nombre","precio"));
+				for (Document document: findIterable)
+					System.out.println("\nMayor número de páginas: " + document.getInteger("páginas"));
+			}
+
+			default -> System.out.println("Saliendo");
 		}
 	}
 
-	private static void iterateAndShow(List<Doujinshi> doujins, FindIterable<Document> findIterable) {
+	// Método que muestra el contenido formateado de un Iterable
+	static void iterateAndShow(List<Doujinshi> doujins, FindIterable<Document> findIterable) {
 		for (Document doc : findIterable) {
 			Doujinshi doujin = new Doujinshi(
 					doc.getInteger("_id"),
@@ -238,6 +256,7 @@ public class Main {
 			System.out.println(d);
 	}
 
+	// Método que devuelve el ID más alto en la base de datos para evitar errores a la hora de introducir nuevos ID
 	static int databaseMaxId() {
 		int num;
 
@@ -250,6 +269,7 @@ public class Main {
 		return num;
 	}
 
+	// Método que devuelve un número entero y gestiona posibles problemas
 	static int getInt() {
 		int num;
 
@@ -267,6 +287,7 @@ public class Main {
 		return num;
 	}
 
+	// Método que devuelve un número real y gestiona posibles problemas
 	static double getDouble() {
 		double num;
 
