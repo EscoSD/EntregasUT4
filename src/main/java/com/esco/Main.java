@@ -20,7 +20,7 @@ public class Main {
 	static int id;
 
 	public static void main(String[] args) {
-		try (MongoClient client = new MongoClient("192.168.1.21")) {
+		try (MongoClient client = new MongoClient()) {
 
 			database = client.getDatabase("EntregasDatabase");
 			collection = database.getCollection("doujinshis");
